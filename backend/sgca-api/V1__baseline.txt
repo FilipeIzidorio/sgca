@@ -1,0 +1,97 @@
+
+-- ===== USUÁRIO =====
+CREATE TABLE usuario (
+  id BIGSERIAL PRIMARY KEY,
+  nome VARCHAR(120) NOT NULL,
+  email VARCHAR(120) UNIQUE NOT NULL,
+  senha VARCHAR(255) NOT NULL,
+  perfil VARCHAR(20) NOT NULL CHECK (perfil IN ('ADMIN', 'PROFESSOR','ALUNO')),
+  created_at TIMESTAMP DEFAULT now() NOT NULL,
+  updated_at TIMESTAMP
+);
+
+-- ===== ALUNO =====
+CREATE TABLE aluno (
+  id BIGSERIAL PRIMARY KEY,
+  nome VARCHAR(120) NOT NULL,
+  email VARCHAR(120) UNIQUE,
+  cpf VARCHAR(14) UNIQUE,
+  dataNascimento DATE,
+  status VARCHAR(20) NOT NULL DEFAULT 'ATIVO',
+  created_at TIMESTAMP DEFAULT now() NOT NULL,
+  updated_at TIMESTAMP
+);
+
+-- ===== CURSO =====
+CREATE TABLE curso (
+  id BIGSERIAL PRIMARY KEY,
+  nome VARCHAR(120) NOT NULL,
+  codigo VARCHAR(20) UNIQUE NOT NULL,
+  carga_horaria INT NOT NULL,
+  descricao VARCHAR(255)
+);
+
+
+-- ===== DISCIPLINA =====
+CREATE TABLE disciplina (
+  id BIGSERIAL PRIMARY KEY,
+  nome VARCHAR(120) NOT NULL,
+  codigo VARCHAR(20) UNIQUE NOT NULL,
+  carga_horaria INT NOT NULL,
+  curso_id BIGINT NOT NULL REFERENCES curso(id) ON DELETE CASCADE
+);
+
+-- ===== TURMA =====
+CREATE TABLE turma (
+  id BIGSERIAL PRIMARY KEY,
+  disciplina_id BIGINT NOT NULL REFERENCES disciplina(id) ON DELETE CASCADE,
+  periodo VARCHAR(20) NOT NULL,
+  professor_id BIGINT REFERENCES usuario(id) ON DELETE SET NULL,
+  capacidade INT NOT NULL
+);
+
+-- ===== MATRÍCULA =====
+CREATE TABLE matricula (
+  id BIGSERIAL PRIMARY KEY,
+  aluno_id BIGINT NOT NULL REFERENCES aluno(id) ON DELETE CASCADE,
+  turma_id BIGINT NOT NULL REFERENCES turma(id) ON DELETE CASCADE,
+  data DATE DEFAULT now() NOT NULL,
+  situacao VARCHAR(20) NOT NULL DEFAULT 'ATIVA',
+  UNIQUE (aluno_id, turma_id)
+);
+
+-- ===== AVALIAÇÃO =====
+CREATE TABLE avaliacao (
+  id BIGSERIAL PRIMARY KEY,
+  turma_id BIGINT NOT NULL REFERENCES turma(id) ON DELETE CASCADE,
+  titulo VARCHAR(80) NOT NULL,
+  peso DOUBLE PRECISION NOT NULL CHECK (peso > 0),
+  tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('PROVA', 'TRABALHO', 'PARTICIPACAO'))
+);
+
+-- ===== NOTA =====
+CREATE TABLE nota (
+  id BIGSERIAL PRIMARY KEY,
+  avaliacao_id BIGINT NOT NULL REFERENCES avaliacao(id) ON DELETE CASCADE,
+  matricula_id BIGINT NOT NULL REFERENCES matricula(id) ON DELETE CASCADE,
+  valor DOUBLE PRECISION NOT NULL CHECK (valor >= 0 AND valor <= 10),
+  data TIMESTAMP DEFAULT now() NOT NULL,
+  UNIQUE (avaliacao_id, matricula_id)
+);
+
+-- ===== PRESENÇA =====
+CREATE TABLE presenca (
+  id BIGSERIAL PRIMARY KEY,
+  turma_id BIGINT NOT NULL REFERENCES turma(id) ON DELETE CASCADE,
+  matricula_id BIGINT NOT NULL REFERENCES matricula(id) ON DELETE CASCADE,
+  data_aula DATE NOT NULL,
+  presente BOOLEAN NOT NULL,
+  UNIQUE (turma_id, matricula_id, data_aula)
+);
+
+-- ===== ÍNDICES AUXILIARES =====
+CREATE INDEX idx_matricula_aluno ON matricula(aluno_id);
+CREATE INDEX idx_matricula_turma ON matricula(turma_id);
+CREATE INDEX idx_avaliacao_turma ON avaliacao(turma_id);
+CREATE INDEX idx_nota_avaliacao ON nota(avaliacao_id);
+CREATE INDEX idx_presenca_turma ON presenca(turma_id);
