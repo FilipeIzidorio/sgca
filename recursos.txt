@@ -1,0 +1,11 @@
+| Recurso                         | URL                                                                                      |
+| ------------------------------- | ---------------------------------------------------------------------------------------- |
+| **API base**                    | [http://localhost:8081/sgca/api/v1]                   |
+| **Swagger UI**                  | [http://localhost:8081/sgca/swagger-ui/index.html] |
+| **Documentação JSON (OpenAPI)** | [http://localhost:8081/sgca/v3/api-docs]         |
+
+como rodar
+mvn spring-boot:run
+
+
+
