@@ -1,0 +1,43 @@
+faça o front com sgca-frontend/
+├── public/
+│   └── index.html
+├── src/
+│   ├── api/
+│   │   └── api.ts          
+│   ├── auth/
+│   │   ├── AuthContext.tsx         ← contexto global de autenticação
+│   │   ├── LoginPage.tsx           ← tela de login
+│   │   └── SignupPage.tsx          ← tela de cadastro
+│   │   └── useAuthStorePage.tsx            
+│   ├── components/
+│   │   ├── Navbar.tsx
+│   │   └── ProtectedRoute.tsx
+│   │   └── DataTable.tsx
+│   │   └── ConfirmDialog.tsx
+│   ├── pages/
+│   │   ├── DashboardPage.tsx
+│   │   ├── UsuariosPage.tsx
+│   │   ├── CursosPage.tsx
+│   │   ├── DisciplinasPage.tsx
+│   │   ├── TurmasPage.tsx
+│   │   ├── AlunosPage.tsx
+│   │   ├── AvaliacaoPage.tsx
+│   │   ├── NotaPage.tsx
+│   │   ├── MatriculaPage.tsx
+│   │   └── PresencasPage.tsx
+│   ├── types/
+│   │   ├── Usuario.ts
+│   │   ├── Curso.ts
+│   │   ├── Disciplina.ts
+│   │   ├── Turma.ts
+│   │   ├── Aluno.ts
+│   │   ├── Avaliacao.ts
+│   │   ├── Nota.ts
+│   │   ├── Matricula.ts
+│   │   └── Presenca.ts
+│   ├── App.tsx
+│   ├── main.tsx
+│   └── vite-env.d.ts
+├── .env
+├── package.json
+└── tsconfig.json

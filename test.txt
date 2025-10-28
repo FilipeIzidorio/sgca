@@ -1,0 +1,28 @@
+ passo 1 ->  npm create vite@latest .
+
+ passo 2 -> npm install
+
+ no index.html passar <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+ passo 3 -> npm run dev
+
+npm create vite@latest sgca-frontend -- --template react-ts
+cd sgca-frontend
+
+
+npm install @mui/material @mui/icons-material @emotion/react @emotion/styled
+npm install axios zustand react-router-dom
+npm install react-hook-form yup @hookform/resolvers
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+npm install lucide-react
+
+
+
+VITE_API_BASE_URL=http://localhost:8081/api/v1
+
+
+
+
+
+ 
