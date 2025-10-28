@@ -1,20 +1,33 @@
 import axios from "axios";
-import { useAuthStore } from "../auth/useAuthStore";
+import { useAuthStore } from "../auth/useAuthStorePage";
 
 const api = axios.create({
-  baseURL: "http://localhost:8081/api/v1", // ajuste se sua porta mudar
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1",
+  headers: { "Content-Type": "application/json" }
 });
 
-// adiciona Authorization: Bearer <token> em toda request
-api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.request.use(
+  (config) => {
+    const token = useAuthStore.getState().token;
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (error.response?.status === 401) {
+      console.warn("Token expirado. Redirecionando para login...");
+      useAuthStore.getState().logout();
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 export default api;

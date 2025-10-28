@@ -1,14 +1,27 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App.tsx";
-import { CssBaseline, ThemeProvider } from "@mui/material";
-import theme from "./theme";
+import { BrowserRouter } from "react-router-dom";
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+import App from "./App";
+import { AuthProvider } from "./auth/AuthContext";
+import { initAuthStoreFromStorage } from "./auth/useAuthStorePage";
+
+import "./index.css";
+
+// garante que o Zustand já tem user/token antes da primeira renderização
+initAuthStoreFromStorage();
+
+const rootEl = document.getElementById("root");
+if (!rootEl) {
+  throw new Error("Elemento #root não encontrado no index.html");
+}
+
+ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <App />
-    </ThemeProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );

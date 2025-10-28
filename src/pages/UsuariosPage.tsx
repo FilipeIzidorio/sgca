@@ -3,7 +3,7 @@ import Navbar from "../components/Navbar";
 import DataTable, { ColumnDef } from "../components/DataTable";
 import ConfirmDialog from "../components/ConfirmDialog";
 import api from "../api/api";
-import { Curso } from "../types/Curso";
+import { Usuario } from "../types/Usuario";
 import axios, { AxiosError } from "axios";
 
 interface ApiError {
@@ -18,9 +18,10 @@ interface ModalProps {
   onClose: () => void;
 }
 
-// Modal reutilizável
+// Modal simples reutilizável
 function Modal({ open, title, children, onClose }: ModalProps) {
   if (!open) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white w-full max-w-lg rounded-xl shadow-lg border border-slate-200 p-6">
@@ -33,72 +34,80 @@ function Modal({ open, title, children, onClose }: ModalProps) {
             Fechar
           </button>
         </div>
+
         {children}
       </div>
     </div>
   );
 }
 
-export default function CursosPage() {
-  // lista de cursos
-  const [cursos, setCursos] = useState<Curso[]>([]);
+type Perfil = Usuario["perfil"];
 
-  // erro global
+export default function UsuariosPage() {
+  // lista de usuários carregada do backend
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+
+  // estado de erro geral
   const [erro, setErro] = useState<string | null>(null);
 
-  // carregando lista
+  // estado de carregamento
   const [carregando, setCarregando] = useState<boolean>(true);
 
-  // modal e item em edição
+  // modal/crud
   const [modalAberto, setModalAberto] = useState<boolean>(false);
-  const [editando, setEditando] = useState<Curso | null>(null);
+  const [editando, setEditando] = useState<Usuario | null>(null);
 
   // confirmação de exclusão
-  const [cursoExcluir, setCursoExcluir] = useState<Curso | null>(null);
+  const [usuarioExcluir, setUsuarioExcluir] = useState<Usuario | null>(null);
 
-  // campos do formulário
-  const [codigo, setCodigo] = useState<string>("");
+  // campos de formulário
   const [nome, setNome] = useState<string>("");
-  const [cargaHoraria, setCargaHoraria] = useState<number>(0);
-  const [descricao, setDescricao] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [perfil, setPerfil] = useState<Perfil>("ALUNO");
+  const [senha, setSenha] = useState<string>("");
+  const [confirmarSenha, setConfirmarSenha] = useState<string>("");
 
   // -----------------------------------------
-  // Funções auxiliares de UI
+  // Helpers de UI
   // -----------------------------------------
 
   function abrirNovo(): void {
     setEditando(null);
-    setCodigo("");
     setNome("");
-    setCargaHoraria(0);
-    setDescricao("");
+    setEmail("");
+    setPerfil("ALUNO");
+    setSenha("");
+    setConfirmarSenha("");
     setModalAberto(true);
   }
 
-  function abrirEditar(curso: Curso): void {
-    setEditando(curso);
-    setCodigo(curso.codigo);
-    setNome(curso.nome);
-    setCargaHoraria(curso.cargaHoraria);
-    setDescricao(descricao);
+  function abrirEditar(u: Usuario): void {
+    setEditando(u);
+    setNome(u.nome);
+    setEmail(u.email);
+    setPerfil(u.perfil);
+    setSenha("");
+    setConfirmarSenha("");
     setModalAberto(true);
   }
 
   // -----------------------------------------
-  // Listar cursos (GET /cursos)
+  // Carregar lista de usuários (GET /usuarios)
+  // rota do backend:
+  // @GetMapping -> public ResponseEntity<List<UsuarioDTO>> listar()
   // -----------------------------------------
-
   async function carregar(): Promise<void> {
     try {
       setCarregando(true);
       setErro(null);
 
-      // backend: @GetMapping em CursoController
-      // ResponseEntity<List<CursoDTO>> listarTodos()
-      const resp = await api.get<Curso[]>("/cursos");
+      // GET /api/v1/usuarios
+      // O axios `api` já injeta Authorization: Bearer <token> via interceptor.
+      const resp = await api.get<Usuario[]>("/usuarios");
 
+      // garante que é array
       const data = Array.isArray(resp.data) ? resp.data : [];
-      setCursos(data);
+      setUsuarios(data);
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const e = err as AxiosError<ApiError>;
@@ -108,11 +117,11 @@ export default function CursosPage() {
           (e.response?.status === 401
             ? "Sessão expirada. Faça login novamente."
             : e.response?.status === 403
-            ? "Acesso negado."
-            : "Erro ao carregar cursos.");
+            ? "Acesso negado. Apenas ADMIN pode listar usuários."
+            : "Erro ao carregar usuários.");
         setErro(msg);
       } else {
-        setErro("Erro inesperado ao carregar cursos.");
+        setErro("Erro inesperado ao carregar usuários.");
       }
     } finally {
       setCarregando(false);
@@ -125,36 +134,50 @@ export default function CursosPage() {
 
   // -----------------------------------------
   // Salvar (criar ou atualizar)
-  // - criar: POST /cursos
-  // - editar: PUT /cursos/{id}
-  //
-  // Seu CursoDTO no backend:
-  // private Long id;
-  // private String codigo;
-  // private String nome;
-  // private int cargaHoraria;
-  // private String descricao;
+  // - criar: POST /auth/signup (AuthController)
+  // - editar: PUT /usuarios/{id} (UsuarioController)
   // -----------------------------------------
-
   async function salvar(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
 
     try {
-      const payload = {
-        codigo,
-        nome,
-        cargaHoraria,
-        descricao,
-      };
-
       if (editando) {
-        // atualizar curso existente
-        await api.put(`/cursos/${editando.id}`, payload);
+        // Atualizar usuário existente
+        // backend: PUT /api/v1/usuarios/{id}
+        // body esperado no controller:
+        // nome, email, senha, confirmarSenha, perfil
+        const payload: {
+          nome: string;
+          email: string;
+          perfil: string;
+          senha?: string;
+          confirmarSenha?: string;
+        } = {
+          nome,
+          email,
+          perfil,
+        };
+
+        if (senha.trim() !== "") {
+          payload.senha = senha;
+          payload.confirmarSenha = confirmarSenha;
+        }
+
+        await api.put(`/usuarios/${editando.id}`, payload);
       } else {
-        // criar novo curso
-        await api.post("/cursos", payload);
+        // Criar novo usuário
+        // backend: POST /api/v1/auth/signup
+        // precisa: nome, email, senha, confirmarSenha, perfil
+        await api.post("/auth/signup", {
+          nome,
+          email,
+          senha,
+          confirmarSenha,
+          perfil,
+        });
       }
 
+      // se deu tudo certo:
       setModalAberto(false);
       await carregar();
     } catch (err) {
@@ -163,25 +186,24 @@ export default function CursosPage() {
         const msg =
           e.response?.data?.erro ||
           e.response?.data?.message ||
-          "Erro ao salvar curso.";
+          "Erro ao salvar usuário.";
         setErro(msg);
       } else {
-        setErro("Erro inesperado ao salvar curso.");
+        setErro("Erro inesperado ao salvar usuário.");
       }
     }
   }
 
   // -----------------------------------------
-  // Excluir curso
-  // backend: DELETE /cursos/{id}
+  // Excluir usuário
+  // backend: DELETE /api/v1/usuarios/{id}
   // -----------------------------------------
-
   async function confirmarExclusao(): Promise<void> {
-    if (!cursoExcluir) return;
+    if (!usuarioExcluir) return;
 
     try {
-      await api.delete(`/cursos/${cursoExcluir.id}`);
-      setCursoExcluir(null);
+      await api.delete(`/usuarios/${usuarioExcluir.id}`);
+      setUsuarioExcluir(null);
       await carregar();
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -189,43 +211,40 @@ export default function CursosPage() {
         const msg =
           e.response?.data?.erro ||
           e.response?.data?.message ||
-          "Erro ao excluir curso.";
+          "Erro ao excluir usuário.";
         setErro(msg);
       } else {
-        setErro("Erro inesperado ao excluir curso.");
+        setErro("Erro inesperado ao excluir usuário.");
       }
     }
   }
 
   // -----------------------------------------
-  // Colunas da tabela
+  // Definição das colunas da tabela
   // -----------------------------------------
-
-  const columns: ColumnDef<Curso>[] = [
+  const columns: ColumnDef<Usuario>[] = [
     { header: "ID", accessor: "id" },
-    { header: "Código", accessor: "codigo" },
     { header: "Nome", accessor: "nome" },
-    { header: "Carga Horária", accessor: "cargaHoraria" },
-    { header: "Descrição", accessor: "descricao" },
+    { header: "Email", accessor: "email" },
+    { header: "Perfil", accessor: "perfil" },
   ];
 
   // -----------------------------------------
   // Render
   // -----------------------------------------
-
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
 
       <main className="flex-1 p-4 max-w-7xl mx-auto space-y-6">
-        {/* Header */}
+        {/* HEADER */}
         <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold text-slate-800">
-              Cursos
+              Usuários
             </h1>
             <p className="text-sm text-slate-500">
-              Cadastro e manutenção de cursos (somente ADMIN)
+              Gerenciamento de contas do sistema (ADMIN)
             </p>
           </div>
 
@@ -233,50 +252,38 @@ export default function CursosPage() {
             className="rounded-lg bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 text-sm font-medium"
             onClick={abrirNovo}
           >
-            Novo Curso
+            Novo Usuário
           </button>
         </header>
 
-        {/* erro global */}
+        {/* ERRO GLOBAL */}
         {erro && (
           <div className="bg-red-100 border border-red-200 text-red-700 text-sm rounded p-2">
             {erro}
           </div>
         )}
 
-        {/* tabela ou carregando */}
+        {/* TABELA OU CARREGANDO */}
         {carregando ? (
           <div className="bg-white border border-slate-200 rounded-xl shadow p-6 text-center text-slate-500 text-sm">
-            Carregando cursos...
+            Carregando usuários...
           </div>
         ) : (
-          <DataTable<Curso>
-            data={cursos}
+          <DataTable<Usuario>
+            data={usuarios}
             columns={columns}
-            onEdit={(c) => abrirEditar(c)}
-            onDelete={(c) => setCursoExcluir(c)}
+            onEdit={(u) => abrirEditar(u)}
+            onDelete={(u) => setUsuarioExcluir(u)}
           />
         )}
 
-        {/* modal de criar/editar curso */}
+        {/* MODAL CADASTRO / EDIÇÃO */}
         <Modal
           open={modalAberto}
-          title={editando ? "Editar Curso" : "Novo Curso"}
+          title={editando ? "Editar Usuário" : "Novo Usuário"}
           onClose={() => setModalAberto(false)}
         >
           <form className="grid gap-4 text-sm" onSubmit={salvar}>
-            <div>
-              <label className="block text-slate-600 font-medium">
-                Código
-              </label>
-              <input
-                value={codigo}
-                onChange={(e) => setCodigo(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-                required
-              />
-            </div>
-
             <div>
               <label className="block text-slate-600 font-medium">
                 Nome
@@ -291,15 +298,12 @@ export default function CursosPage() {
 
             <div>
               <label className="block text-slate-600 font-medium">
-                Carga Horária (h)
+                Email
               </label>
               <input
-                value={cargaHoraria}
-                onChange={(e) =>
-                  setCargaHoraria(Number(e.target.value))
-                }
-                type="number"
-                min={0}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
                 required
               />
@@ -307,14 +311,58 @@ export default function CursosPage() {
 
             <div>
               <label className="block text-slate-600 font-medium">
-                Descrição
+                Perfil
               </label>
-              <textarea
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 min-h-[80px] resize-y"
-                placeholder="Ex.: Curso de Análise e Desenvolvimento de Sistemas com foco em backend Java."
+              <select
+                value={perfil}
+                onChange={(e) =>
+                  setPerfil(e.target.value as Perfil)
+                }
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
                 required
+              >
+                <option value="ADMIN">ADMIN</option>
+                <option value="PROFESSOR">PROFESSOR</option>
+                <option value="ALUNO">ALUNO</option>
+              </select>
+            </div>
+
+            <div className="border-t border-slate-200 pt-4">
+              <label className="block text-slate-600 font-medium">
+                Senha{" "}
+                {editando && (
+                  <span className="text-xs text-slate-400">
+                    (deixe vazio para não alterar)
+                  </span>
+                )}
+              </label>
+              <input
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                type="password"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                placeholder={
+                  editando ? "Nova senha (opcional)" : "Senha"
+                }
+                required={!editando} // obrigatório só no cadastro
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-600 font-medium">
+                Confirmar Senha
+              </label>
+              <input
+                value={confirmarSenha}
+                onChange={(e) => setConfirmarSenha(e.target.value)}
+                type="password"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                placeholder={
+                  editando
+                    ? "Confirmar (se alterar senha)"
+                    : "Confirmar senha"
+                }
+                required={!editando} // obrigatório só no cadastro
               />
             </div>
 
@@ -328,21 +376,23 @@ export default function CursosPage() {
               </button>
 
               <button className="rounded-lg bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 font-medium">
-                {editando ? "Salvar Alterações" : "Cadastrar"}
+                {editando
+                  ? "Salvar Alterações"
+                  : "Cadastrar"}
               </button>
             </div>
           </form>
         </Modal>
 
-        {/* diálogo de confirmação de exclusão */}
-        {cursoExcluir && (
+        {/* CONFIRM DIALOG EXCLUSÃO */}
+        {usuarioExcluir && (
           <ConfirmDialog
-            title="Excluir curso"
-            message={`Deseja excluir o curso "${cursoExcluir.nome}"?`}
+            title="Excluir usuário"
+            message={`Deseja excluir o usuário "${usuarioExcluir.nome}"?`}
             confirmLabel="Excluir"
             cancelLabel="Cancelar"
             onConfirm={confirmarExclusao}
-            onCancel={() => setCursoExcluir(null)}
+            onCancel={() => setUsuarioExcluir(null)}
           />
         )}
       </main>
