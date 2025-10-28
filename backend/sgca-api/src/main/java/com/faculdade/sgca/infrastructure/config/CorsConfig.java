@@ -13,22 +13,21 @@ public class CorsConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        // 🌐 Libera origens — use "*" apenas em ambiente local
-                        // Se quiser especificar:
-                        // .allowedOriginPatterns("http://localhost:8080", "http://localhost:8081")
-                        .allowedOriginPatterns("*")
 
-                        // 🔑 Libera todos os headers (Authorization, Content-Type, etc.)
+                registry.addMapping("/**")
+                        // Origem do seu frontend Vite
+                        .allowedOriginPatterns("http://localhost:5173")
+
+                        // Headers que o front pode enviar
                         .allowedHeaders("*")
 
-                        // ⚙️ Libera métodos HTTP comuns
+                        // Métodos permitidos
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
 
-                        // 🧠 Permite envio de cookies, tokens JWT e autenticação
+                        // Permitir enviar Authorization: Bearer <token>
                         .allowCredentials(true)
 
-                        // ⏱️ Tempo (em segundos) que o navegador pode cachear a política CORS
+                        // Cache do preflight em segundos
                         .maxAge(3600);
             }
         };
