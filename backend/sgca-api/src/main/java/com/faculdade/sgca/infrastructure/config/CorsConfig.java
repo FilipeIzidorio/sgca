@@ -15,19 +15,10 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
 
                 registry.addMapping("/**")
-                        // Origem do seu frontend Vite
                         .allowedOriginPatterns("http://localhost:5173")
-
-                        // Headers que o front pode enviar
                         .allowedHeaders("*")
-
-                        // Métodos permitidos
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-
-                        // Permitir enviar Authorization: Bearer <token>
                         .allowCredentials(true)
-
-                        // Cache do preflight em segundos
                         .maxAge(3600);
             }
         };
